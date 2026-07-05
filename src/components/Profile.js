@@ -5,7 +5,7 @@ import {
   Container, Row, Col, Card, Form, Button, 
   Alert, Spinner, Badge 
 } from 'react-bootstrap';
-import { FaCamera, FaSave, FaTimes, FaUser } from 'react-icons/fa';
+import { FaCamera, FaSave, FaTimes } from 'react-icons/fa';
 import Avatar from './Avatar';
 
 const Profile = () => {

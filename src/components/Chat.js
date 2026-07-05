@@ -3,14 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { 
   Container, Row, Col, Form, Button, 
-  InputGroup, Badge, Dropdown, Modal,
+  InputGroup, Dropdown, Modal,
   Image, Spinner
 } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaUserCog, FaSignOutAlt, FaSearch, 
   FaImage, FaPaperclip, FaTimes,
-  FaDownload, FaCheck, FaCheckDouble,
+  FaCheck, FaCheckDouble,
   FaTrash, FaFile, FaVideo, FaMusic,
   FaReply
 } from 'react-icons/fa';
@@ -39,6 +39,7 @@ const Chat = () => {
   // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch messages when selected user changes
@@ -48,6 +49,7 @@ const Chat = () => {
       const interval = setInterval(fetchMessages, 5000);
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUser]);
 
   // Filter users based on search term
