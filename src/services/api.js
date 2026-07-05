@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'https://chatapp-ovm8.onrender.com/api';
+const API_URL = 'http://localhost:8000/api';
+// https://chatapp-ovm8.onrender.com/api
 
 const api = axios.create({
   baseURL: API_URL,
