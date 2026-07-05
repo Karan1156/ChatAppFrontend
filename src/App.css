@@ -36,3 +36,219 @@
     transform: rotate(360deg);
   }
 }
+
+
+.hover-effect:hover {
+  background-color: #f8f9fa !important;
+  transition: background-color 0.2s;
+}
+
+.hover-effect.bg-primary:hover {
+  background-color: #0b5ed7 !important;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+/* Avatar hover effects */
+.avatar-container {
+  transition: transform 0.2s ease;
+}
+
+.avatar-container:hover {
+  transform: scale(1.05);
+}
+
+/* User list item hover */
+.user-item {
+  transition: all 0.2s ease;
+}
+
+.user-item:hover {
+  background-color: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.user-item.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+/* Stick figure animation */
+@keyframes avatarPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.avatar-pulse {
+  animation: avatarPulse 2s ease-in-out infinite;
+}
+
+/* User list styles */
+.user-item {
+  transition: all 0.2s ease;
+}
+
+.user-item:hover {
+  background-color: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.user-item.active {
+  background-color: #0d6efd !important;
+  color: white !important;
+}
+
+.user-item.active .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Message styles */
+.message-bubble {
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.message-bubble-sent {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.message-bubble-received {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+
+/* Cursor styles */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Message container with hover effects */
+.message-container {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.message-bubble {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+/* Hover controls fade in/out */
+.message-controls {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.message-container:hover .message-controls {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: all;
+}
+
+/* Message bubble hover effect */
+.message-bubble:hover {
+  filter: brightness(0.98);
+}
+
+.message-bubble.bg-primary:hover {
+  filter: brightness(0.92);
+}
+
+/* Message controls buttons */
+.message-controls .btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.message-controls .btn:hover {
+  transform: scale(1.1);
+}
+
+.message-controls .btn-link.text-secondary:hover {
+  color: #0d6efd !important;
+}
+
+.message-controls .btn-link.text-danger:hover {
+  color: #dc3545 !important;
+}
+
+/* Reply indicator */
+.reply-indicator {
+  background-color: rgba(13, 110, 253, 0.1);
+  border-left: 3px solid #0d6efd;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+/* Animation for message controls */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.message-controls {
+  animation: fadeInUp 0.2s ease;
+}
+
+/* Tooltip style for controls */
+.message-controls .btn {
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-controls .btn svg {
+  font-size: 12px;
+}
