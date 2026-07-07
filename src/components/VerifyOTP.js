@@ -76,7 +76,7 @@ const VerifyOTP = () => {
     <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
       <Card style={{ width: '400px' }}>
         <Card.Body>
-          <h3 className="text-center mb-4">Verify Email</h3>
+          <h3 className="text-center mb-4">Verify Email Check spam</h3>
           {message && <Alert variant="success">{message}</Alert>}
           {error && <Alert variant="danger">{error}</Alert>}
           <p className="text-center">

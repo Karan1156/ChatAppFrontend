@@ -47,7 +47,7 @@ const Login = () => {
           {error && <Alert variant="danger">{error}</Alert>}
           {needsVerification && (
             <Alert variant="info">
-              Please verify your email. 
+              Please verify your email Check spam. 
               <Button variant="link" onClick={handleResendOTP} className="p-0 ms-2">
                 Verify Now
               </Button>
