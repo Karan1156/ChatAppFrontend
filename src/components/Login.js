@@ -55,7 +55,7 @@ const Login = () => {
           )}
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
-              <Form.Label>Username or Email</Form.Label>
+              <Form.Label>Email</Form.Label>
               <Form.Control
                 type="text"
                 value={username}
@@ -89,7 +89,7 @@ const Login = () => {
             <Link to="/forgot-password">Forgot Password?</Link>
           </div>
           <div className="text-center mt-2">
-            Don't have an account? <Link to="/register">Register</Link>
+            Don't have an account? <Link to="/register">Create One</Link>
           </div>
         </Card.Body>
       </Card>
