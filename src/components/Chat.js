@@ -39,8 +39,6 @@ const Chat = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [hoveredMessage, setHoveredMessage] = useState(null);
@@ -559,7 +557,7 @@ const Chat = () => {
                       variant="link"
                       className="text-secondary"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={loading || uploading || !selectedUser}
+                      disabled={loading || !selectedUser}
                     >
                       <FaPaperclip />
                     </Button>
@@ -569,13 +567,13 @@ const Chat = () => {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder={`Message ${selectedUser.username}...`}
-                      disabled={loading || uploading}
+                      disabled={loading}
                     />
                     
                     <Button 
                       type="submit" 
                       variant="primary"
-                      disabled={loading || uploading || !newMessage.trim()}
+                      disabled={loading || !newMessage.trim()}
                       className="send-btn"
                     >
                       {loading ? (
@@ -585,21 +583,6 @@ const Chat = () => {
                       )}
                     </Button>
                   </InputGroup>
-                  
-                  {uploading && (
-                    <div className="upload-progress">
-                      <div className="d-flex justify-content-between mb-1">
-                        <small className="text-muted">Uploading...</small>
-                        <small className="text-muted">{uploadProgress}%</small>
-                      </div>
-                      <div className="progress">
-                        <div 
-                          className="progress-bar progress-bar-striped progress-bar-animated"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </Form>
               </div>
             </>
