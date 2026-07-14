@@ -5,7 +5,7 @@ import api from '../services/api';
 import { 
   Container, Row, Col, Form, Button, 
   InputGroup, Dropdown, Modal,
-  Image, Spinner, Badge
+  Image, Spinner
 } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -14,8 +14,7 @@ import {
   FaCheck, FaCheckDouble,
   FaTrash, FaFile, FaVideo, FaMusic,
   FaReply, FaBell, FaBellSlash,
-  FaSmile, FaArrowLeft, FaPhone, FaVideo as FaVideoCall,
-  FaEllipsisV
+  FaSmile, FaArrowLeft, FaEllipsisV
 } from 'react-icons/fa';
 import Avatar from './Avatar';
 import NotificationPanel from './NotificationPanel';
@@ -46,49 +45,8 @@ const Chat = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMobileChat, setShowMobileChat] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState([]);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-
-  // Track online status using frontend logic
-  useEffect(() => {
-    // Set current user as online
-    if (user) {
-      setOnlineUsers(prev => [...prev, user.id]);
-    }
-
-    // Update online status every 30 seconds
-    const interval = setInterval(() => {
-      // Keep current user online
-      if (user) {
-        setOnlineUsers(prev => {
-          if (!prev.includes(user.id)) {
-            return [...prev, user.id];
-          }
-          return prev;
-        });
-      }
-    }, 30000);
-
-    // Handle visibility change - user is online when tab is visible
-    const handleVisibilityChange = () => {
-      // Keep user online when tab is visible
-      if (!document.hidden && user) {
-        setOnlineUsers(prev => {
-          if (!prev.includes(user.id)) {
-            return [...prev, user.id];
-          }
-          return prev;
-        });
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user]);
 
   // Responsive handling
   useEffect(() => {
@@ -109,42 +67,14 @@ const Chat = () => {
     try {
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().catch(() => {
-          // Silently fail on mobile
           console.log('Notification permission not available');
         });
       }
     } catch (error) {
-      // Silently fail if Notification API is not available
       console.log('Notification API not supported');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Update online status based on user activity
-  useEffect(() => {
-    const updateOnlineStatus = () => {
-      if (user) {
-        setOnlineUsers(prev => {
-          if (!prev.includes(user.id)) {
-            return [...prev, user.id];
-          }
-          return prev;
-        });
-      }
-    };
-
-    // User is online when interacting with the app
-    const events = ['click', 'touchstart', 'scroll', 'keydown'];
-    events.forEach(event => {
-      document.addEventListener(event, updateOnlineStatus);
-    });
-
-    return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, updateOnlineStatus);
-      });
-    };
-  }, [user]);
 
   const fetchUsers = async () => {
     try {
@@ -153,7 +83,6 @@ const Chat = () => {
       setFilteredUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
-      // Don't show alert for network errors on mobile
       if (!error.message?.includes('Network Error')) {
         alert('Failed to fetch users. Please pull to refresh.');
       }
@@ -180,7 +109,6 @@ const Chat = () => {
       scrollToBottom();
     } catch (error) {
       console.error('Error fetching messages:', error);
-      // Don't alert on mobile for background errors
     }
   };
 
@@ -228,7 +156,7 @@ const Chat = () => {
 
       await api.post('/chat/messages/', messageData);
       
-      // Add notification for receiver - safely handle on mobile
+      // Add notification for receiver
       if (selectedUser.id !== user.id) {
         try {
           addNotification({
@@ -242,7 +170,6 @@ const Chat = () => {
             onClick: () => setSelectedUser(selectedUser)
           });
         } catch (notifError) {
-          // Silently fail if notification fails
           console.log('Notification error:', notifError);
         }
       }
@@ -253,7 +180,6 @@ const Chat = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       
-      // Better error handling for mobile
       let errorMsg = 'Failed to send message. ';
       if (error.response) {
         errorMsg += error.response.data?.message || 'Server error';
@@ -263,7 +189,6 @@ const Chat = () => {
         errorMsg += error.message || 'Please try again.';
       }
       
-      // Only show alert for non-network errors on mobile
       if (!error.message?.includes('Network Error')) {
         alert(errorMsg);
       }
@@ -295,7 +220,6 @@ const Chat = () => {
 
   const handleReply = (message) => {
     setReplyTo(message);
-    // Focus the input
     const input = document.querySelector('input[type="text"]');
     if (input) input.focus();
   };
@@ -377,15 +301,6 @@ const Chat = () => {
     }
   };
 
-  // Check if a user is online (frontend simulation)
-  const isUserOnline = (userId) => {
-    // Current user is always online
-    if (userId === user?.id) return true;
-    
-    // Check if user is in online list
-    return onlineUsers.includes(userId);
-  };
-
   return (
     <Container fluid className="chat-app p-0">
       <NotificationPanel />
@@ -455,40 +370,36 @@ const Chat = () => {
                 <p>{searchTerm ? 'No users found' : 'No users available'}</p>
               </div>
             ) : (
-              filteredUsers.map((u) => {
-                const online = isUserOnline(u.id);
-                return (
-                  <div
-                    key={u.id}
-                    className={`user-item ${selectedUser?.id === u.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedUser(u);
-                      if (isMobile) setShowMobileChat(true);
-                    }}
-                  >
-                    <div className="d-flex align-items-center">
-                      <div className="position-relative">
-                        <Avatar user={u} size={45} className="me-3" />
-                        <span className={`user-status ${online ? 'online' : 'offline'}`} />
+              filteredUsers.map((u) => (
+                <div
+                  key={u.id}
+                  className={`user-item ${selectedUser?.id === u.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedUser(u);
+                    if (isMobile) setShowMobileChat(true);
+                  }}
+                >
+                  <div className="d-flex align-items-center">
+                    <div className="position-relative">
+                      <Avatar user={u} size={45} className="me-3" />
+                    </div>
+                    <div className="flex-grow-1">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="fw-bold">{u.username}</div>
+                        <small className="text-muted">2m ago</small>
                       </div>
-                      <div className="flex-grow-1">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div className="fw-bold">{u.username}</div>
-                          <small className="text-muted">2m ago</small>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="small text-muted text-truncate" style={{ maxWidth: '120px' }}>
+                          {u.bio || 'No bio yet'}
                         </div>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div className="small text-muted text-truncate" style={{ maxWidth: '120px' }}>
-                            {u.bio || 'No bio yet'}
-                          </div>
-                          {mutedChats.includes(u.id) && (
-                            <FaBellSlash className="text-muted" size={12} />
-                          )}
-                        </div>
+                        {mutedChats.includes(u.id) && (
+                          <FaBellSlash className="text-muted" size={12} />
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
           </div>
         </Col>
@@ -516,9 +427,6 @@ const Chat = () => {
                   <div className="flex-grow-1">
                     <div className="d-flex align-items-center gap-2">
                       <h5 className="mb-0">{selectedUser.username}</h5>
-                      <Badge bg={isUserOnline(selectedUser.id) ? 'success' : 'secondary'} pill>
-                        {isUserOnline(selectedUser.id) ? 'Online' : 'Offline'}
-                      </Badge>
                     </div>
                     <small className="text-muted">
                       {selectedUser.bio || 'No bio yet'}
@@ -526,12 +434,6 @@ const Chat = () => {
                   </div>
                 </div>
                 <div className="d-flex align-items-center gap-2">
-                  <Button variant="link" className="text-secondary">
-                    <FaPhone />
-                  </Button>
-                  <Button variant="link" className="text-secondary">
-                    <FaVideoCall />
-                  </Button>
                   <Button
                     variant="link"
                     className="text-secondary"
