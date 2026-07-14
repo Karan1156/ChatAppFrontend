@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import api from '../services/api';
 import { 
   Container, Row, Col, Form, Button, 
   InputGroup, Dropdown, Modal,
-  Image, Spinner
+  Image, Spinner, Badge
 } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -12,13 +13,24 @@ import {
   FaImage, FaPaperclip, FaTimes,
   FaCheck, FaCheckDouble,
   FaTrash, FaFile, FaVideo, FaMusic,
-  FaReply
+  FaReply, FaBell, FaBellSlash,
+  FaSmile, FaArrowLeft, FaPhone, FaVideo as FaVideoCall,
+  FaEllipsisV
 } from 'react-icons/fa';
 import Avatar from './Avatar';
+import NotificationPanel from './NotificationPanel';
 import { formatDistanceToNow } from 'date-fns';
+import './Chat.css';
 
 const Chat = () => {
   const { user, logout } = useAuth();
+  const { 
+    unreadCount, 
+    setIsPanelOpen, 
+    toggleMuteChat, 
+    mutedChats,
+    addNotification 
+  } = useNotification();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -33,13 +45,31 @@ const Chat = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [hoveredMessage, setHoveredMessage] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showMobileChat, setShowMobileChat] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Responsive handling
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      if (window.innerWidth > 768) {
+        setShowMobileChat(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   // Fetch messages when selected user changes
@@ -49,7 +79,6 @@ const Chat = () => {
       const interval = setInterval(fetchMessages, 5000);
       return () => clearInterval(interval);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUser]);
 
   // Filter users based on search term
@@ -113,15 +142,28 @@ const Chat = () => {
         message_type: 'text'
       };
 
-      // Add reply to if replying
       if (replyTo) {
         messageData.reply_to = replyTo.id;
       }
 
       await api.post('/chat/messages/', messageData);
       
+      // Add notification for receiver
+      if (selectedUser.id !== user.id) {
+        addNotification({
+          id: Date.now(),
+          type: 'message',
+          title: `New message from ${user.username}`,
+          body: newMessage.trim(),
+          timestamp: new Date().toISOString(),
+          chat_id: selectedUser.id,
+          isRead: false,
+          onClick: () => setSelectedUser(selectedUser)
+        });
+      }
+      
       setNewMessage('');
-      setReplyTo(null); // Clear reply state
+      setReplyTo(null);
       await fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -196,7 +238,7 @@ const Chat = () => {
         fileInputRef.current.value = '';
       }
 
-      setReplyTo(null); // Clear reply state
+      setReplyTo(null);
       await fetchMessages();
       setUploadProgress(0);
       
@@ -315,37 +357,55 @@ const Chat = () => {
   };
 
   return (
-    <Container fluid className="vh-100 p-0">
+    <Container fluid className="chat-app p-0">
+      <NotificationPanel />
+      
       <Row className="h-100 m-0">
-        {/* Sidebar */}
-        <Col md={3} className="border-end p-0 bg-light">
-          <div className="p-3 border-bottom bg-white">
+        {/* Sidebar - Users List */}
+        <Col 
+          md={3} 
+          lg={3} 
+          className={`chat-sidebar ${isMobile && showMobileChat ? 'd-none' : ''}`}
+        >
+          <div className="sidebar-header">
             <div className="d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Chats</h5>
-              <Dropdown>
-                <Dropdown.Toggle variant="outline-secondary" size="sm">
-                  <Avatar user={user} size={30} />
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => navigate('/profile')}>
-                    <FaUserCog className="me-2" />
-                    Profile Settings
-                  </Dropdown.Item>
-                  <Dropdown.Divider />
-                  <Dropdown.Item onClick={logout} className="text-danger">
-                    <FaSignOutAlt className="me-2" />
-                    Logout
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
+              <div className="d-flex align-items-center gap-2">
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  className="position-relative notification-btn"
+                  onClick={() => setIsPanelOpen(true)}
+                >
+                  <FaBell />
+                  {unreadCount > 0 && (
+                    <span className="notification-badge">{unreadCount}</span>
+                  )}
+                </Button>
+                <Dropdown>
+                  <Dropdown.Toggle variant="outline-secondary" size="sm" className="avatar-dropdown">
+                    <Avatar user={user} size={30} />
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Item onClick={() => navigate('/profile')}>
+                      <FaUserCog className="me-2" />
+                      Profile
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item onClick={logout} className="text-danger">
+                      <FaSignOutAlt className="me-2" />
+                      Logout
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              </div>
             </div>
-            <div className="mt-2">
+            <div className="user-greeting">
               <small className="text-muted">Welcome, {user?.username}</small>
             </div>
           </div>
           
-          {/* Search Bar */}
-          <div className="p-2 border-bottom bg-white">
+          <div className="search-bar">
             <InputGroup size="sm">
               <InputGroup.Text>
                 <FaSearch />
@@ -359,8 +419,7 @@ const Chat = () => {
             </InputGroup>
           </div>
 
-          {/* User List */}
-          <div className="overflow-auto" style={{ height: 'calc(100vh - 160px)' }}>
+          <div className="user-list">
             {filteredUsers.length === 0 ? (
               <div className="text-center text-muted mt-4">
                 <p>{searchTerm ? 'No users found' : 'No users available'}</p>
@@ -369,18 +428,29 @@ const Chat = () => {
               filteredUsers.map((u) => (
                 <div
                   key={u.id}
-                  className={`p-3 border-bottom cursor-pointer user-item ${
-                    selectedUser?.id === u.id ? 'active' : 'bg-white'
-                  }`}
-                  onClick={() => setSelectedUser(u)}
-                  style={{ cursor: 'pointer' }}
+                  className={`user-item ${selectedUser?.id === u.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedUser(u);
+                    if (isMobile) setShowMobileChat(true);
+                  }}
                 >
                   <div className="d-flex align-items-center">
-                    <Avatar user={u} size={45} className="me-3" />
+                    <div className="position-relative">
+                      <Avatar user={u} size={45} className="me-3" />
+                      <span className={`user-status ${u.is_online ? 'online' : 'offline'}`} />
+                    </div>
                     <div className="flex-grow-1">
-                      <div className="fw-bold">{u.username}</div>
-                      <div className="small text-muted">
-                        {u.bio || 'No bio yet'}
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="fw-bold">{u.username}</div>
+                        <small className="text-muted">2m ago</small>
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="small text-muted text-truncate" style={{ maxWidth: '120px' }}>
+                          {u.bio || 'No bio yet'}
+                        </div>
+                        {mutedChats.includes(u.id) && (
+                          <FaBellSlash className="text-muted" size={12} />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -391,177 +461,152 @@ const Chat = () => {
         </Col>
         
         {/* Chat Area */}
-        <Col md={9} className="d-flex flex-column bg-white p-0">
+        <Col 
+          md={9} 
+          lg={9} 
+          className={`chat-area ${isMobile && !showMobileChat ? 'd-none d-md-block' : ''}`}
+        >
           {selectedUser ? (
             <>
-              {/* Chat Header */}
-              <div className="p-3 border-bottom bg-light">
+              <div className="chat-header">
                 <div className="d-flex align-items-center">
+                  {isMobile && (
+                    <Button
+                      variant="link"
+                      className="back-btn"
+                      onClick={() => setShowMobileChat(false)}
+                    >
+                      <FaArrowLeft />
+                    </Button>
+                  )}
                   <Avatar user={selectedUser} size={40} className="me-3" />
                   <div className="flex-grow-1">
-                    <h5 className="mb-0">{selectedUser.username}</h5>
+                    <div className="d-flex align-items-center gap-2">
+                      <h5 className="mb-0">{selectedUser.username}</h5>
+                      <Badge bg={selectedUser.is_online ? 'success' : 'secondary'} pill>
+                        {selectedUser.is_online ? 'Online' : 'Offline'}
+                      </Badge>
+                    </div>
                     <small className="text-muted">
                       {selectedUser.bio || 'No bio yet'}
                     </small>
                   </div>
-                  <Button 
-                    variant="outline-secondary" 
-                    size="sm" 
-                    onClick={() => setSelectedUser(null)}
-                  >
-                    <FaTimes />
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <Button variant="link" className="text-secondary">
+                    <FaPhone />
                   </Button>
+                  <Button variant="link" className="text-secondary">
+                    <FaVideoCall />
+                  </Button>
+                  <Button
+                    variant="link"
+                    className="text-secondary"
+                    onClick={() => toggleMuteChat(selectedUser.id)}
+                    title={mutedChats.includes(selectedUser.id) ? 'Unmute' : 'Mute'}
+                  >
+                    {mutedChats.includes(selectedUser.id) ? <FaBellSlash /> : <FaBell />}
+                  </Button>
+                  <Dropdown>
+                    <Dropdown.Toggle variant="link" className="text-secondary">
+                      <FaEllipsisV />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu>
+                      <Dropdown.Item onClick={() => navigate('/profile')}>
+                        View Profile
+                      </Dropdown.Item>
+                      <Dropdown.Item onClick={() => setSelectedUser(null)}>
+                        Close Chat
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div 
-                className="flex-grow-1 overflow-auto p-3" 
-                style={{ height: 'calc(100vh - 140px)', backgroundColor: '#f8f9fa' }}
-              >
+              <div className="messages-container">
                 {messages.length === 0 ? (
-                  <div className="text-center text-muted mt-5">
-                    <p>No messages yet. Start a conversation!</p>
+                  <div className="empty-state">
+                    <Avatar user={selectedUser} size={80} />
+                    <h5 className="mt-3">{selectedUser.username}</h5>
+                    <p className="text-muted">No messages yet. Start a conversation!</p>
                   </div>
                 ) : (
-                  messages.map((msg, index) => (
-                    <div
-                      key={index}
-                      className={`mb-2 message-container`}
-                      onMouseEnter={() => setHoveredMessage(msg.id)}
-                      onMouseLeave={() => setHoveredMessage(null)}
-                    >
-                      <div
-                        className={`d-flex ${
-                          msg.sender === user.id ? 'justify-content-end' : 'justify-content-start'
-                        }`}
-                      >
+                  <>
+                    {messages.map((msg, index) => {
+                      const isOwn = msg.sender === user.id;
+                      const showAvatar = index === 0 || messages[index - 1]?.sender !== msg.sender;
+                      
+                      return (
                         <div
-                          className={`message-bubble d-inline-block p-2 rounded position-relative ${
-                            msg.sender === user.id 
-                              ? 'bg-primary text-white' 
-                              : 'bg-white border'
-                          }`}
-                          style={{ maxWidth: '70%' }}
+                          key={msg.id || index}
+                          className={`message-wrapper ${isOwn ? 'own' : 'received'}`}
+                          onMouseEnter={() => setHoveredMessage(msg.id)}
+                          onMouseLeave={() => setHoveredMessage(null)}
                         >
-                          {/* Reply indicator */}
-                          {msg.reply_to && (
-                            <div className="small text-muted mb-1 border-start ps-2">
-                              <div className="fw-bold">Replied to:</div>
-                              <div>{msg.reply_to.content}</div>
-                            </div>
-                          )}
-                          
-                          {renderMessageContent(msg)}
-                          
-                          <div className="d-flex justify-content-between align-items-center mt-1">
-                            <small 
-                              className={`${
-                                msg.sender === user.id ? 'text-light' : 'text-muted'
-                              }`}
-                              style={{ fontSize: '0.7rem' }}
-                            >
-                              {formatTime(msg.timestamp)}
-                            </small>
-                            <div className="d-flex align-items-center gap-1">
-                              {msg.sender === user.id && (
-                                <>
-                                  {msg.is_delivered ? (
-                                    <FaCheckDouble 
-                                      className={msg.is_read ? 'text-info' : 'text-muted'}
-                                      size={12}
-                                    />
-                                  ) : (
-                                    <FaCheck className="text-muted" size={12} />
+                          <div className={`message-group ${!showAvatar ? 'consecutive' : ''}`}>
+                            {!isOwn && showAvatar && (
+                              <Avatar user={selectedUser} size={28} className="message-avatar" />
+                            )}
+                            <div className={`message-bubble ${isOwn ? 'own' : 'received'}`}>
+                              {msg.reply_to && (
+                                <div className="reply-preview">
+                                  <small className="text-muted">Replying to:</small>
+                                  <div>{msg.reply_to.content}</div>
+                                </div>
+                              )}
+                              {renderMessageContent(msg)}
+                              <div className="message-footer">
+                                <small className="message-time">
+                                  {formatTime(msg.timestamp)}
+                                </small>
+                                {isOwn && (
+                                  <span className="message-status">
+                                    {msg.is_read ? (
+                                      <FaCheckDouble className="text-primary" />
+                                    ) : msg.is_delivered ? (
+                                      <FaCheckDouble className="text-muted" />
+                                    ) : (
+                                      <FaCheck className="text-muted" />
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                              {hoveredMessage === msg.id && !msg.is_deleted && (
+                                <div className="message-actions">
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    onClick={() => handleReply(msg)}
+                                  >
+                                    <FaReply />
+                                  </Button>
+                                  {isOwn && (
+                                    <Button
+                                      variant="link"
+                                      size="sm"
+                                      className="text-danger"
+                                      onClick={() => {
+                                        setSelectedMessage(msg);
+                                        setShowDeleteModal(true);
+                                      }}
+                                    >
+                                      <FaTrash />
+                                    </Button>
                                   )}
-                                </>
+                                </div>
                               )}
                             </div>
                           </div>
-
-                          {/* Hover Controls - Only show for own messages and on hover */}
-                          {msg.sender === user.id && hoveredMessage === msg.id && !msg.is_deleted && (
-                            <div 
-                              className="message-controls position-absolute"
-                              style={{
-                                top: '-12px',
-                                right: msg.sender === user.id ? '-10px' : 'auto',
-                                left: msg.sender === user.id ? 'auto' : '-10px',
-                                display: 'flex',
-                                gap: '4px',
-                                backgroundColor: 'white',
-                                borderRadius: '20px',
-                                padding: '4px 8px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                zIndex: 10
-                              }}
-                            >
-                              <Button
-                                variant="link"
-                                className="p-0 text-secondary"
-                                size="sm"
-                                onClick={() => handleReply(msg)}
-                                title="Reply"
-                                style={{ fontSize: '12px' }}
-                              >
-                                <FaReply />
-                              </Button>
-                              <Button
-                                variant="link"
-                                className="p-0 text-danger"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedMessage(msg);
-                                  setShowDeleteModal(true);
-                                }}
-                                title="Delete"
-                                style={{ fontSize: '12px' }}
-                              >
-                                <FaTrash />
-                              </Button>
-                            </div>
-                          )}
-
-                          {/* Hover Controls for received messages - only reply */}
-                          {msg.sender !== user.id && hoveredMessage === msg.id && !msg.is_deleted && (
-                            <div 
-                              className="message-controls position-absolute"
-                              style={{
-                                top: '-12px',
-                                right: 'auto',
-                                left: '-10px',
-                                display: 'flex',
-                                gap: '4px',
-                                backgroundColor: 'white',
-                                borderRadius: '20px',
-                                padding: '4px 8px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                zIndex: 10
-                              }}
-                            >
-                              <Button
-                                variant="link"
-                                className="p-0 text-secondary"
-                                size="sm"
-                                onClick={() => handleReply(msg)}
-                                title="Reply"
-                                style={{ fontSize: '12px' }}
-                              >
-                                <FaReply />
-                              </Button>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    </div>
-                  ))
+                      );
+                    })}
+                  </>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Reply Indicator */}
               {replyTo && (
-                <div className="p-2 border-top bg-light d-flex justify-content-between align-items-center">
+                <div className="reply-indicator">
                   <div className="d-flex align-items-center gap-2">
                     <FaReply className="text-primary" />
                     <div>
@@ -575,48 +620,31 @@ const Chat = () => {
                 </div>
               )}
 
-              {/* Message Input */}
-              <div className="p-3 border-top bg-light">
-                <Form onSubmit={sendMessage}>
+              <div className="message-input-area">
+                <Form onSubmit={sendMessage} className="w-100">
                   <InputGroup>
-                    {/* Hidden file input */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      style={{ display: 'none' }}
-                      onChange={handleFileSelect}
-                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
-                    />
-                    
-                    {/* Attachment buttons */}
                     <Button
-                      variant="outline-secondary"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={loading || uploading || !selectedUser}
-                      title="Attach file"
+                      variant="link"
+                      className="text-secondary"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     >
-                      <FaPaperclip />
+                      <FaSmile />
                     </Button>
                     
                     <Button
-                      variant="outline-secondary"
-                      onClick={() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.accept = 'image/*';
-                          fileInputRef.current.click();
-                        }
-                      }}
+                      variant="link"
+                      className="text-secondary"
+                      onClick={() => fileInputRef.current?.click()}
                       disabled={loading || uploading || !selectedUser}
-                      title="Send image"
                     >
-                      <FaImage />
+                      <FaPaperclip />
                     </Button>
                     
                     <Form.Control
                       type="text"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder={uploading ? `Uploading... ${uploadProgress}%` : `Message ${selectedUser.username}...`}
+                      placeholder={`Message ${selectedUser.username}...`}
                       disabled={loading || uploading}
                     />
                     
@@ -624,6 +652,7 @@ const Chat = () => {
                       type="submit" 
                       variant="primary"
                       disabled={loading || uploading || !newMessage.trim()}
+                      className="send-btn"
                     >
                       {loading ? (
                         <Spinner animation="border" size="sm" />
@@ -633,21 +662,16 @@ const Chat = () => {
                     </Button>
                   </InputGroup>
                   
-                  {/* Upload progress bar */}
                   {uploading && (
-                    <div className="mt-2">
+                    <div className="upload-progress">
                       <div className="d-flex justify-content-between mb-1">
-                        <small className="text-muted">Uploading file...</small>
+                        <small className="text-muted">Uploading...</small>
                         <small className="text-muted">{uploadProgress}%</small>
                       </div>
-                      <div className="progress" style={{ height: '5px' }}>
+                      <div className="progress">
                         <div 
                           className="progress-bar progress-bar-striped progress-bar-animated"
-                          role="progressbar"
                           style={{ width: `${uploadProgress}%` }}
-                          aria-valuenow={uploadProgress}
-                          aria-valuemin="0"
-                          aria-valuemax="100"
                         />
                       </div>
                     </div>
@@ -656,10 +680,10 @@ const Chat = () => {
               </div>
             </>
           ) : (
-            <div className="d-flex flex-column justify-content-center align-items-center h-100">
+            <div className="empty-chat-state">
               <div className="text-center">
-                <Avatar user={null} size={80} />
-                <h5 className="text-muted mt-3">Welcome to Chat App</h5>
+                <Avatar user={null} size={100} />
+                <h4 className="mt-3">Welcome to ChatApp</h4>
                 <p className="text-muted">Select a user from the sidebar to start chatting</p>
                 <Button variant="primary" onClick={fetchUsers}>
                   Refresh Users
@@ -670,7 +694,6 @@ const Chat = () => {
         </Col>
       </Row>
 
-      {/* Delete Confirmation Modal */}
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Delete Message</Modal.Title>
