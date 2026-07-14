@@ -70,32 +70,8 @@ const Chat = () => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Fetch messages when selected user changes
-  useEffect(() => {
-    if (selectedUser) {
-      fetchMessages();
-      const interval = setInterval(fetchMessages, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [selectedUser]);
-
-  // Filter users based on search term
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter(u => 
-        u.username.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [searchTerm, users]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const fetchUsers = async () => {
     try {
@@ -128,6 +104,32 @@ const Chat = () => {
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
+  };
+
+  // Fetch messages when selected user changes
+  useEffect(() => {
+    if (selectedUser) {
+      fetchMessages();
+      const interval = setInterval(fetchMessages, 5000);
+      return () => clearInterval(interval);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUser]);
+
+  // Filter users based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredUsers(users);
+    } else {
+      const filtered = users.filter(u => 
+        u.username.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+    }
+  }, [searchTerm, users]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const sendMessage = async (e) => {
@@ -170,84 +172,6 @@ const Chat = () => {
       alert('Failed to send message. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Handle file selection
-  const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !selectedUser) {
-      if (!selectedUser) alert('Please select a user first');
-      return;
-    }
-
-    // Validate file size (50MB max)
-    if (file.size > 50 * 1024 * 1024) {
-      alert('File size exceeds 50MB limit');
-      return;
-    }
-
-    // Validate file type
-    const validTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-      'video/mp4', 'video/webm', 'video/quicktime',
-      'audio/mpeg', 'audio/wav', 'audio/ogg',
-      'application/pdf', 'application/msword', 
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/zip', 'text/plain'
-    ];
-
-    if (!validTypes.includes(file.type) && !file.type.startsWith('image/')) {
-      alert('File type not supported');
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
-
-    try {
-      const formData = new FormData();
-      formData.append('receiver', selectedUser.id);
-      formData.append('media_file', file);
-      
-      // Determine message type based on file type
-      let messageType = 'file';
-      if (file.type.startsWith('image/')) messageType = 'image';
-      else if (file.type.startsWith('video/')) messageType = 'video';
-      else if (file.type.startsWith('audio/')) messageType = 'audio';
-      
-      formData.append('message_type', messageType);
-
-      // Add reply to if replying
-      if (replyTo) {
-        formData.append('reply_to', replyTo.id);
-      }
-
-      await api.post('/chat/messages/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
-        }
-      });
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      setReplyTo(null);
-      await fetchMessages();
-      setUploadProgress(0);
-      
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file. Please try again.');
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
     }
   };
 
