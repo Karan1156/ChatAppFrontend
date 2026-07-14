@@ -49,8 +49,6 @@ const Chat = () => {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Track online status using frontend logic
   useEffect(() => {
@@ -61,17 +59,27 @@ const Chat = () => {
 
     // Update online status every 30 seconds
     const interval = setInterval(() => {
-      // Simulate online status - users who have been active in the last 2 minutes
-      const now = Date.now();
-      // You can add logic here to track user activity
-      // For now, we'll just keep current user online
+      // Keep current user online
+      if (user) {
+        setOnlineUsers(prev => {
+          if (!prev.includes(user.id)) {
+            return [...prev, user.id];
+          }
+          return prev;
+        });
+      }
     }, 30000);
 
     // Handle visibility change - user is online when tab is visible
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // User might be away, but keep them online for simplicity
-        // In production, you'd implement proper presence detection
+      // Keep user online when tab is visible
+      if (!document.hidden && user) {
+        setOnlineUsers(prev => {
+          if (!prev.includes(user.id)) {
+            return [...prev, user.id];
+          }
+          return prev;
+        });
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -251,83 +259,6 @@ const Chat = () => {
     }
   };
 
-  const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !selectedUser) {
-      if (!selectedUser) alert('Please select a user first');
-      return;
-    }
-
-    // Validate file size (50MB max)
-    if (file.size > 50 * 1024 * 1024) {
-      alert('File size exceeds 50MB limit');
-      return;
-    }
-
-    // Validate file type
-    const validTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-      'video/mp4', 'video/webm', 'video/quicktime',
-      'audio/mpeg', 'audio/wav', 'audio/ogg',
-      'application/pdf', 'application/msword', 
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/zip', 'text/plain'
-    ];
-
-    if (!validTypes.includes(file.type) && !file.type.startsWith('image/')) {
-      alert('File type not supported');
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
-
-    try {
-      const formData = new FormData();
-      formData.append('receiver', selectedUser.id);
-      formData.append('media_file', file);
-      
-      // Determine message type based on file type
-      let messageType = 'file';
-      if (file.type.startsWith('image/')) messageType = 'image';
-      else if (file.type.startsWith('video/')) messageType = 'video';
-      else if (file.type.startsWith('audio/')) messageType = 'audio';
-      
-      formData.append('message_type', messageType);
-
-      // Add reply to if replying
-      if (replyTo) {
-        formData.append('reply_to', replyTo.id);
-      }
-
-      await api.post('/chat/messages/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
-        }
-      });
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      setReplyTo(null);
-      await fetchMessages();
-      setUploadProgress(0);
-      
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file. Please try again.');
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-    }
-  };
-
   const deleteMessage = async () => {
     if (!selectedMessage) return;
     
@@ -438,8 +369,8 @@ const Chat = () => {
     // Current user is always online
     if (userId === user?.id) return true;
     
-    // Check if user is in online list and has been active recently
-    return onlineUsers.includes(userId) && Math.random() > 0.3; // Simulate some users online
+    // Check if user is in online list
+    return onlineUsers.includes(userId);
   };
 
   return (
@@ -724,7 +655,7 @@ const Chat = () => {
                       variant="link"
                       className="text-secondary"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={loading || uploading || !selectedUser}
+                      disabled={loading || !selectedUser}
                     >
                       <FaPaperclip />
                     </Button>
@@ -734,13 +665,13 @@ const Chat = () => {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder={`Message ${selectedUser.username}...`}
-                      disabled={loading || uploading}
+                      disabled={loading}
                     />
                     
                     <Button 
                       type="submit" 
                       variant="primary"
-                      disabled={loading || uploading || !newMessage.trim()}
+                      disabled={loading || !newMessage.trim()}
                       className="send-btn"
                     >
                       {loading ? (
@@ -750,21 +681,6 @@ const Chat = () => {
                       )}
                     </Button>
                   </InputGroup>
-                  
-                  {uploading && (
-                    <div className="upload-progress">
-                      <div className="d-flex justify-content-between mb-1">
-                        <small className="text-muted">Uploading...</small>
-                        <small className="text-muted">{uploadProgress}%</small>
-                      </div>
-                      <div className="progress">
-                        <div 
-                          className="progress-bar progress-bar-striped progress-bar-animated"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </Form>
               </div>
             </>
