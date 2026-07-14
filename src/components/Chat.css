@@ -291,12 +291,6 @@
   flex-shrink: 0;
 }
 
-/* Typing Indicator */
-.typing-indicator {
-  color: #28a745;
-  font-style: italic;
-}
-
 /* Empty Chat State */
 .empty-chat-state {
   display: flex;
