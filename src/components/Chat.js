@@ -105,9 +105,17 @@ const Chat = () => {
   // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    // Request notification permission - safely handle on mobile
+    try {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {
+          // Silently fail on mobile
+          console.log('Notification permission not available');
+        });
+      }
+    } catch (error) {
+      // Silently fail if Notification API is not available
+      console.log('Notification API not supported');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -220,18 +228,23 @@ const Chat = () => {
 
       await api.post('/chat/messages/', messageData);
       
-      // Add notification for receiver
+      // Add notification for receiver - safely handle on mobile
       if (selectedUser.id !== user.id) {
-        addNotification({
-          id: Date.now(),
-          type: 'message',
-          title: `New message from ${user.username}`,
-          body: newMessage.trim(),
-          timestamp: new Date().toISOString(),
-          chat_id: selectedUser.id,
-          isRead: false,
-          onClick: () => setSelectedUser(selectedUser)
-        });
+        try {
+          addNotification({
+            id: Date.now(),
+            type: 'message',
+            title: `New message from ${user.username}`,
+            body: newMessage.trim(),
+            timestamp: new Date().toISOString(),
+            chat_id: selectedUser.id,
+            isRead: false,
+            onClick: () => setSelectedUser(selectedUser)
+          });
+        } catch (notifError) {
+          // Silently fail if notification fails
+          console.log('Notification error:', notifError);
+        }
       }
       
       setNewMessage('');
